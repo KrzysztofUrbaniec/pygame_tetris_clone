@@ -95,6 +95,8 @@ def runGame():
     direction = None
     generateShapePreview = True
     decreaseFallingSpeed = False
+    isMusicPaused = False
+    isGamePaused = False
 
     # Generate first shape 
     randomShape = random.choice(listOfShapeTemplates)
@@ -109,7 +111,7 @@ def runGame():
         MAINBOARDSURF.fill(BGCOLOR)
         SIDEPANELSURF.fill(BGCOLOR)
         
-        # Generate new shape to show it in preview winodw
+        # Generate new shape to show it in preview window
         if generateShapePreview:
             randomShapePreview = random.choice(listOfShapeTemplates)
             generateShapePreview = False
@@ -180,7 +182,13 @@ def runGame():
                         rotationCounter -= 1
                         currentShapeRects, rotationCounter, currentShapePositioningRect = \
                             createShapeRects(randomShape, rotationCounter, currentShapeRects, currentShapePositioningRect.x, currentShapePositioningRect.y)
-  
+
+                if event.key == K_m:
+                    isMusicPaused = pauseMusic(event, isMusicPaused)
+
+                if event.key == K_p:
+                    isGamePaused = True 
+                    isMusicPaused = gamePaused(isGamePaused, isMusicPaused)
 #---------------------------------------------------------------------------------------------------------------------------------------------------
 
         # Allow for horizontal movement only when figure doesn't collide with edges or other figures
@@ -215,6 +223,28 @@ def runGame():
         pygame.display.update()
         FPSClock.tick(FPS)   
 
+def gamePaused(isGamePaused, isMusicPaused):
+    while isGamePaused:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == KEYDOWN:
+                if event.key == K_m:
+                    isMusicPaused = pauseMusic(event, isMusicPaused)
+                if event.key == K_p:
+                    isGamePaused = False
+    return isMusicPaused
+
+def pauseMusic(event, isMusicPaused):
+    if event.key == K_m:
+        if not isMusicPaused: 
+            pygame.mixer.music.pause()
+            isMusicPaused = True
+        elif isMusicPaused: 
+            pygame.mixer.music.unpause()
+            isMusicPaused = False
+    return isMusicPaused
 
 # Read the shape stored in a list and create rects where the figure should be
 def createShapeRects(shape, rotationCounter, currentRectsCoords, positionX, positionY):
@@ -286,7 +316,9 @@ def removeRow(rectsOnTheGround, score, level, fallingSpeed):
         # Increase score 
         score += 10*howManyRowsToDelete
 
-    level, fallingSpeed = checkIflevelUp(score, level, fallingSpeed)
+    if checkIflevelUp(score, level, fallingSpeed):
+        level += 1
+        fallingSpeed -= 2
 
     return score, level, fallingSpeed
 
@@ -339,11 +371,10 @@ def checkCollisionWithBordersDuringRotation(currentShapeRects):
     return False
 
 def checkIflevelUp(score, level, fallingSpeed):
-    if score > 100*level:
-        level += 1
-        fallingSpeed -= 2
+    if score >= 100*level and level <= 10:
+        return True
     
-    return level, fallingSpeed    
+    return False
 
 # Handle horizontal movement of blocks
 def moveShapeInXDir(currentShapeRects, direction, currentShapePositioningRect):
@@ -438,11 +469,10 @@ def createShapePreviewWindow(randomShape):
     for rowIndex, row in enumerate(randomShape[0]):
         for blockIndex, block in enumerate(row):
             if block == '1':
-                # TODO Add some syntactic sugar
                 # TODO Add better figure positioning inside preview window
-                left = 0.1*previewSurfaceWidth + blockIndex*25
-                top = 0.1*previewSurfaceHeight + rowIndex*25
-                pygame.draw.rect(previewSurface, randomShape[-1], (left+BLOCKGAPSIZE, top+BLOCKGAPSIZE, 25-BLOCKGAPSIZE,25-BLOCKGAPSIZE))
+                left = 0.1*previewSurfaceWidth + blockIndex*BLOCKSIZE
+                top = 0.1*previewSurfaceHeight + rowIndex*BLOCKSIZE
+                pygame.draw.rect(previewSurface, randomShape[-1], (left+BLOCKGAPSIZE, top+BLOCKGAPSIZE, BLOCKSIZE-BLOCKGAPSIZE, BLOCKSIZE-BLOCKGAPSIZE))
     pygame.draw.rect(previewSurface, TEXTCOLOR, (0, 0, previewSurfaceWidth, previewSurfaceHeight), 2)
     SIDEPANELSURF.blit(previewSurface, (w*0.25, h*0.35))
     SIDEPANELSURF.blit(nextText, (w*0.4, h*0.3))
